@@ -38,12 +38,14 @@ export default function Home() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN"; // or "hi-IN"
-    recognition.continuous = false;
+    recognition.lang = "en-IN";
+    recognition.continuous = true; // ✅ IMPORTANT
     recognition.interimResults = false;
 
     recognition.onresult = (event) => {
-      const spokenText = event.results[0][0].transcript;
+      const spokenText =
+        event.results[event.results.length - 1][0].transcript;
+
       setLastSpoken(spokenText);
 
       if (normalize(spokenText) === normalize(mantra)) {
@@ -61,11 +63,22 @@ export default function Home() {
       }
     };
 
+    recognition.onerror = (e) => {
+      console.error("Speech error:", e);
+    };
+
     recognition.onend = () => {
-      if (listening) recognition.start();
+      // 🔁 Auto-restart ONLY if user hasn't stopped it
+      if (listening) {
+        recognition.start();
+      }
     };
 
     recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+    };
   }, [mantra, listening]);
 
   const startListening = () => {
@@ -73,14 +86,17 @@ export default function Home() {
       alert("Please enter a mantra");
       return;
     }
+    if (!recognitionRef.current) return;
+
     setListening(true);
     recognitionRef.current.start();
   };
 
   const stopListening = () => {
     setListening(false);
-    recognitionRef.current.stop();
+    recognitionRef.current?.stop();
   };
+
 
   return (
     <main className="app-container">
